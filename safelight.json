@@ -1,0 +1,13 @@
+{
+  "id": "relight",
+  "name": "Relight",
+  "version": "1.0.0",
+  "description": "Place lights on the photo that dodge and burn it along its own surface. A height and normal map are read from the photo on your graphics card, so light falls across the subject instead of as a flat gradient. Ambient deepens the shadows; each light has height, intensity, falloff and warmth.",
+  "author": "Anthony Reimche",
+  "main": "dist/index.js",
+  "license": "GPL-3.0-or-later",
+  "categories": ["Tone"],
+  "keywords": ["relight", "lighting", "dodge", "burn", "normal map", "height map", "depth", "light", "shadows", "scene-referred"],
+  "repository": "anthonyreimche/Relight",
+  "minAppVersion": "3.2.4"
+}
