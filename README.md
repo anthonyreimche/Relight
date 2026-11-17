@@ -9,7 +9,7 @@ Everything happens on your graphics card, from the photo's own pixels. Nothing i
 1. Open **Relight** in Develop.
 2. Lower **Ambient** to deepen the shadows everywhere: 100 % keeps the photo's own light, 50 % is one stop darker.
 3. Click **+ Add Light**. It appears a third of the way into the view. Drag it on the photo to where the light should come from; it can sit outside the frame, like a window out of shot.
-4. Shape the light with its sliders: **Intensity**, **Height** (low lights rake across the surface, high ones light it from the front), **Falloff** (how quickly it fades with distance; the dashed ring is where it halves) and **Warmth**.
+4. Shape the light with its sliders: **Intensity**, **Height** (low lights rake across the surface, high ones light it from the front), **Falloff** (how quickly it fades with distance; the dashed ring is where it halves) and its colour: **Hue** picks it and **Saturation** sets how strongly it is coloured, from white at 0.
 
 5. Click **Done** or press **Esc** when the lights are placed: their handles and the falloff ring leave the photo. **Edit Lights**, or choosing a light in the list, brings them back.
 

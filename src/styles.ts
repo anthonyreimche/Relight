@@ -6,7 +6,7 @@
 // wins over them. The `html.sl-larger-text` rules repeat core's Accessibility
 // rule for small text.
 
-import { warmthRgb } from "./model";
+import { lightDisplayRgb, type Light } from "./model";
 import type { UITokens } from "./safelight";
 
 const P = "safelight-relight";
@@ -29,13 +29,20 @@ export const cls = {
   editor: `${P}-editor`,
 } as const;
 
-/** A light's colour for a swatch or handle: its warmth, brightest channel at full. */
-export function warmthCss(warmth: number): string {
-  const rgb = warmthRgb(warmth);
-  const top = Math.max(...rgb);
-  const enc = (v: number) => (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055);
-  const [r, g, b] = rgb.map((v) => Math.round(255 * enc(v / top)));
+/** A light's colour for a swatch or handle, brightest channel at full. */
+export function lightCss({ hue, saturation }: Pick<Light, "hue" | "saturation">): string {
+  const [r, g, b] = lightDisplayRgb(hue, saturation).map((v) => Math.round(255 * v));
   return `rgb(${r}, ${g}, ${b})`;
+}
+
+/** The Hue slider's track: every hue at full saturation. */
+export const HUE_TRACK = `linear-gradient(to right, ${[0, 60, 120, 180, 240, 300, 360]
+  .map((hue) => lightCss({ hue, saturation: 100 }))
+  .join(", ")})`;
+
+/** The Saturation slider's track: white to the light's hue. */
+export function saturationTrack(hue: number): string {
+  return `linear-gradient(to right, ${lightCss({ hue, saturation: 0 })}, ${lightCss({ hue, saturation: 100 })})`;
 }
 
 const tint = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, transparent)`;

@@ -95,9 +95,12 @@ vec3 rlNormal(float gx, float gy) {
 
 export const SHADE_HELPERS_GLSL = `
 ${NORMAL_GLSL}
-vec3 rlWarmth(float w) {
-  float t = w * 0.01;
-  vec3 k = vec3(1.0 + 0.3 * t, 1.0, max(1.0 - 0.45 * t, 0.0));
+vec3 rlColour(vec4 tone) {
+  float t = tone.y * 0.01;
+  vec3 warmth = vec3(1.0 + 0.3 * t, 1.0, max(1.0 - 0.45 * t, 0.0));
+  vec3 hue = clamp(abs(mod(tone.z / 60.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+  vec3 e = mix(vec3(1.0), hue, clamp(tone.w * 0.01, 0.0, 1.0));
+  vec3 k = warmth * mix(e / 12.92, pow((e + 0.055) / 1.055, vec3(2.4)), step(0.04045, e));
   return k / luma(k);
 }
 float rlShade(vec4 place, vec2 xy, vec2 aspect, vec3 n) {
@@ -120,7 +123,7 @@ export const SHADE_PASS_GLSL = `
   vec3 g = vec3(ambient * 0.01);
   for (int i = 0; i < 4; i++) {
     if (float(i) < lightCount && lightTone[i].x > 0.0) {
-      g += lightTone[i].x * 0.01 * rlShade(lightPlace[i], xy, aspect, n) * rlWarmth(lightTone[i].y);
+      g += lightTone[i].x * 0.01 * rlShade(lightPlace[i], xy, aspect, n) * rlColour(lightTone[i]);
     }
   }
   c = vec4(g, 1.0);

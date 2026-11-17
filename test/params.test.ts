@@ -2,14 +2,14 @@
 // keys that keep an untouched photo free of passes.
 
 import { describe, expect, it } from "vitest";
-import { DEFAULT_PARAMS, LEVELS, MAX_LIGHTS, NEW_LIGHT, type Light, type Params } from "../src/model";
+import { DEFAULT_PARAMS, LEVELS, MAX_LIGHTS, NEW_LIGHT, warmthColour, type Light, type Params } from "../src/model";
 import { deriveAll, key, readParams, rederivePatch, resetPatch, viewKey, viewValues } from "../src/params";
 
 const light = (over: Partial<Light> = {}): Light => ({ u: 0.3, v: 0.6, ...NEW_LIGHT, ...over });
 
 describe("deriveAll / readParams", () => {
   it("round-trips a parameter set", () => {
-    const p: Params = { ambient: 60, detail: 30, depth: 70, invert: true, lights: [light(), light({ u: 1.2, warmth: -40 })] };
+    const p: Params = { ambient: 60, detail: 30, depth: 70, invert: true, lights: [light(), light({ u: 1.2, hue: 211.5, saturation: 40 })] };
     expect(readParams(deriveAll(p))).toEqual(p);
   });
 
@@ -26,10 +26,24 @@ describe("deriveAll / readParams", () => {
   });
 
   it("stores the lights as two vec4 arrays and a count", () => {
-    const bag = deriveAll({ ...DEFAULT_PARAMS, lights: [light({ u: 0.1, v: 0.2, height: 30, falloff: 40, intensity: 90, warmth: 20 })] });
+    const bag = deriveAll({ ...DEFAULT_PARAMS, lights: [light({ u: 0.1, v: 0.2, height: 30, falloff: 40, intensity: 90, hue: 200, saturation: 30 })] });
     expect(bag[key("lightCount")]).toBe(1);
     expect(bag[key("lightPlace")]).toEqual([0.1, 0.2, 30, 40, ...new Array(12).fill(0)]);
-    expect(bag[key("lightTone")]).toEqual([90, 20, 0, 0, ...new Array(12).fill(0)]);
+    expect(bag[key("lightTone")]).toEqual([90, 0, 200, 30, ...new Array(12).fill(0)]);
+  });
+
+  it("reads a light stored with Warmth (1.0.0) as its colour", () => {
+    const bag = deriveAll({ ...DEFAULT_PARAMS, lights: [light()] });
+    const tone = new Array(16).fill(0);
+    tone.splice(0, 4, 90, 40, 0, 0);
+    expect(readParams({ ...bag, [key("lightTone")]: tone }).lights[0]).toMatchObject({ intensity: 90, ...warmthColour(40) });
+  });
+
+  it("keeps Hue and Saturation in range", () => {
+    const bag = deriveAll({ ...DEFAULT_PARAMS, lights: [light()] });
+    const tone = new Array(16).fill(0);
+    tone.splice(0, 4, 90, 0, 400, -5);
+    expect(readParams({ ...bag, [key("lightTone")]: tone }).lights[0]).toMatchObject({ hue: 360, saturation: 0 });
   });
 
   it("keeps at most four lights", () => {

@@ -9,13 +9,13 @@
 // edits the mask's Ambient and lights, on the photo's surface, and while it
 // shows the lights on the canvas are the mask's.
 
-import { DEFAULT_PARAMS, MAX_LIGHTS, RANGE, type Light, type Params } from "./model";
+import { DEFAULT_PARAMS, MAX_LIGHTS, NEW_LIGHT, RANGE, type Light, type Params } from "./model";
 import { addLight, maskTarget, photoTarget, removeLight, setLight, setParams, type Target } from "./edit";
 import { readParams, type ViewMode } from "./params";
 import { React, api } from "./rt";
 import type { ParamScope } from "./safelight";
 import { store } from "./store";
-import { cls, warmthCss } from "./styles";
+import { HUE_TRACK, cls, lightCss, saturationTrack } from "./styles";
 
 const VIEW_OPTIONS: { value: string; label: string; title: string }[] = [
   { value: "0", label: "Photo", title: "Show the photo" },
@@ -30,6 +30,7 @@ interface SliderSpec<T> {
   range: { min: number; max: number; step: number };
   defaultValue: number;
   read(v: T): number;
+  track?(v: T): string;
 }
 
 const SURFACE: (SliderSpec<Params> & { key: "depth" | "detail" })[] = [
@@ -37,11 +38,19 @@ const SURFACE: (SliderSpec<Params> & { key: "depth" | "detail" })[] = [
   { key: "detail", label: "Detail", range: RANGE.detail, defaultValue: 50, read: (p) => p.detail },
 ];
 
-const LIGHT: (SliderSpec<Light> & { key: "intensity" | "height" | "falloff" | "warmth" })[] = [
+const LIGHT: (SliderSpec<Light> & { key: "intensity" | "height" | "falloff" | "hue" | "saturation" })[] = [
   { key: "intensity", label: "Intensity", range: RANGE.intensity, defaultValue: 80, read: (l) => l.intensity },
   { key: "height", label: "Height", range: RANGE.height, defaultValue: 40, read: (l) => l.height },
   { key: "falloff", label: "Falloff", range: RANGE.falloff, defaultValue: 50, read: (l) => l.falloff },
-  { key: "warmth", label: "Warmth", range: RANGE.warmth, defaultValue: 0, read: (l) => l.warmth },
+  { key: "hue", label: "Hue", range: RANGE.hue, defaultValue: NEW_LIGHT.hue, read: (l) => l.hue, track: () => HUE_TRACK },
+  {
+    key: "saturation",
+    label: "Saturation",
+    range: RANGE.saturation,
+    defaultValue: NEW_LIGHT.saturation,
+    read: (l) => l.saturation,
+    track: (l) => saturationTrack(l.hue),
+  },
 ];
 
 export function RelightPanel() {
@@ -208,7 +217,7 @@ function Lights({ target, p, scope }: { target: Target; p: Params; scope: ParamS
                 store().getState().select(i);
               }}
             >
-              <span className={cls.swatch} style={{ background: warmthCss(l.warmth) }} />
+              <span className={cls.swatch} style={{ background: lightCss(l) }} />
               <span className={cls.name}>{`Light ${i + 1}`}</span>
               <button
                 type="button"
@@ -241,6 +250,7 @@ function Lights({ target, p, scope }: { target: Target; p: Params; scope: ParamS
               max={s.range.max}
               step={s.range.step}
               defaultValue={s.defaultValue}
+              trackBackground={s.track?.(editing)}
               onChange={(v) => setLight(target, chosen, { [s.key]: v })}
               onCommit={() => target.commit(`light ${s.label.toLowerCase()}`)}
             />

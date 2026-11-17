@@ -16,7 +16,7 @@ import { editing, removeLight, setLight } from "./edit";
 import { layoutPoint, longEdgeToHeightFraction, readMapping, type Point } from "./mapping";
 import { React, api } from "./rt";
 import { store } from "./store";
-import { warmthCss } from "./styles";
+import { lightCss } from "./styles";
 
 const HANDLE = 16;
 
@@ -157,7 +157,7 @@ export function RelightOverlay() {
               height: HANDLE,
               padding: 0,
               borderRadius: "50%",
-              background: warmthCss(l.warmth),
+              background: lightCss(l),
               border: on ? "2px solid var(--color-accent)" : "2px solid rgba(255,255,255,0.9)",
               boxShadow: "0 0 0 1px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.5)",
               opacity: l.intensity > 0 ? 1 : 0.5,

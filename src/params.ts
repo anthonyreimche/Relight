@@ -1,12 +1,14 @@
 // The bridge between the panel's params and the photo's param bag. Every key
 // lives under the stage id. The lights are two vec4 arrays of MAX_LIGHTS
-// (place: u, v, height, falloff; tone: intensity, warmth, 0, 0) and a count.
+// (place: u, v, height, falloff; tone: intensity, warmth, hue, saturation)
+// and a count. Warmth is 1.0.0's light colour, written as 0 since: an edit
+// that has one reads as its hue and saturation, and renders as it did.
 // Four keys are derived and stored with the edit: `on` (the stage changes the
 // photo), `lit` (some light shines), and the two passes' draw counts, so an
 // untouched or reset photo runs no pass, and the renderer leaves the stage out
 // while `on` is 0.
 
-import { DEFAULT_PARAMS, LEVELS, MAX_LIGHTS, POSITION_LIMIT, RANGE, isActive, isLit, type Light, type Params } from "./model";
+import { DEFAULT_PARAMS, LEVELS, MAX_LIGHTS, POSITION_LIMIT, RANGE, isActive, isLit, warmthColour, type Light, type Params } from "./model";
 
 export const EXT_ID = "relight";
 export const STAGE_ID = `${EXT_ID}.light`;
@@ -34,6 +36,8 @@ function num(bag: Bag, k: BagKey, range: { min: number; max: number }, fallback:
 
 const clamp = (v: number, r: { min: number; max: number }) => Math.min(Math.max(v, r.min), r.max);
 
+const WARMTH = { min: -100, max: 100 };
+
 function readLights(bag: Bag): Light[] {
   const place = bag[key("lightPlace")];
   const tone = bag[key("lightTone")];
@@ -42,16 +46,18 @@ function readLights(bag: Bag): Light[] {
     return [];
   const lights: Light[] = [];
   for (let i = 0; i < Math.floor(count); i++) {
-    const values = [...place.slice(i * 4, i * 4 + 4), ...tone.slice(i * 4, i * 4 + 2)].filter(finite);
-    if (values.length !== 6) continue;
-    const [u, v, height, falloff, intensity, warmth] = values;
+    const values = [...place.slice(i * 4, i * 4 + 4), ...tone.slice(i * 4, i * 4 + 4)].filter(finite);
+    if (values.length !== 8) continue;
+    const [u, v, height, falloff, intensity, warmth, hue, saturation] = values;
+    const colour = warmth !== 0 ? warmthColour(clamp(warmth, WARMTH)) : { hue, saturation };
     lights.push({
       u: clamp(u, POSITION_LIMIT),
       v: clamp(v, POSITION_LIMIT),
       height: clamp(height, RANGE.height),
       falloff: clamp(falloff, RANGE.falloff),
       intensity: clamp(intensity, RANGE.intensity),
-      warmth: clamp(warmth, RANGE.warmth),
+      hue: clamp(colour.hue, RANGE.hue),
+      saturation: clamp(colour.saturation, RANGE.saturation),
     });
   }
   return lights;
@@ -74,7 +80,7 @@ export function lightArrays(lights: readonly Light[]): { place: number[]; tone: 
   const tone = new Array<number>(MAX_LIGHTS * 4).fill(0);
   lights.slice(0, MAX_LIGHTS).forEach((l, i) => {
     place.splice(i * 4, 4, l.u, l.v, l.height, l.falloff);
-    tone.splice(i * 4, 2, l.intensity, l.warmth);
+    tone.splice(i * 4, 4, l.intensity, 0, l.hue, l.saturation);
   });
   return { place, tone };
 }

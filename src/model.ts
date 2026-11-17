@@ -45,8 +45,10 @@ export interface Light {
   falloff: number;
   /** 0…200 %: the light a face-on spot under it receives, as a share of the photo's own. */
   intensity: number;
-  /** −100 (cool) … 100 (warm). */
-  warmth: number;
+  /** 0…360°: the light's hue. */
+  hue: number;
+  /** 0…100: how strongly the hue colours the light; 0 is white. */
+  saturation: number;
 }
 
 export interface Params {
@@ -63,7 +65,7 @@ export interface Params {
 
 export const DEFAULT_PARAMS: Params = { ambient: 100, detail: 50, depth: 50, invert: false, lights: [] };
 
-export const NEW_LIGHT: Omit<Light, "u" | "v"> = { height: 40, falloff: 50, intensity: 80, warmth: 0 };
+export const NEW_LIGHT: Omit<Light, "u" | "v"> = { height: 40, falloff: 50, intensity: 80, hue: 35, saturation: 0 };
 
 export const RANGE = {
   ambient: { min: 0, max: 100, step: 1 },
@@ -72,7 +74,8 @@ export const RANGE = {
   height: { min: 0, max: 100, step: 1 },
   falloff: { min: 0, max: 100, step: 1 },
   intensity: { min: 0, max: 200, step: 1 },
-  warmth: { min: -100, max: 100, step: 1 },
+  hue: { min: 0, max: 360, step: 1 },
+  saturation: { min: 0, max: 100, step: 1 },
 } as const;
 
 /** The lights that add anything. */
@@ -137,14 +140,41 @@ export function luma(r: number, g: number, b: number): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-/** The light's colour, at unit luminance. */
-export function warmthRgb(warmth: number): [number, number, number] {
-  const t = warmth / 100;
-  const r = 1 + 0.3 * t;
-  const g = 1;
-  const b = Math.max(1 - 0.45 * t, 0);
+type Rgb = [number, number, number];
+
+const srgbDecode = (v: number) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+const srgbEncode = (v: number) => (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055);
+
+/** The light's colour as shown (display sRGB, 0 to 1), its brightest channel at full. */
+export function lightDisplayRgb(hue: number, saturation: number): Rgb {
+  const h = hue / 60;
+  const s = saturation / 100;
+  const channel = (offset: number) => {
+    const c = Math.min(Math.max(Math.abs(((((h + offset) % 6) + 6) % 6) - 3) - 1, 0), 1);
+    return 1 - s + s * c;
+  };
+  return [channel(0), channel(4), channel(2)];
+}
+
+/** The light's colour, linear at unit luminance. */
+export function lightColour(hue: number, saturation: number): Rgb {
+  const [r, g, b] = lightDisplayRgb(hue, saturation).map(srgbDecode);
   const y = luma(r, g, b);
   return [r / y, g / y, b / y];
+}
+
+/** The hue and saturation of a light stored with 1.0.0's Warmth (−100 cool …
+ *  100 warm): the same colour, so an older edit renders as it did. */
+export function warmthColour(warmth: number): { hue: number; saturation: number } {
+  const t = warmth / 100;
+  const k = [1 + 0.3 * t, 1, Math.max(1 - 0.45 * t, 0)];
+  const top = Math.max(...k);
+  const [r, g, b] = k.map((c) => srgbEncode(c / top));
+  const max = Math.max(r, g, b);
+  const d = max - Math.min(r, g, b);
+  if (d <= 0) return { hue: 0, saturation: 0 };
+  const sector = r === max ? (g - b) / d : g === max ? 2 + (b - r) / d : 4 + (r - g) / d;
+  return { hue: (((sector * 60) % 360) + 360) % 360, saturation: (100 * d) / max };
 }
 
 /** The unit normal of a surface with slopes (gx, gy) per long edge, x right, y down, z toward the viewer. */
@@ -173,7 +203,7 @@ export function gainAt(p: Params, x: number, y: number, ax: number, ay: number, 
   const g: [number, number, number] = [a, a, a];
   for (const l of shiningLights(p)) {
     const s = (l.intensity / 100) * lightShade(l, x, y, ax, ay, n);
-    const c = warmthRgb(l.warmth);
+    const c = lightColour(l.hue, l.saturation);
     g[0] += s * c[0];
     g[1] += s * c[1];
     g[2] += s * c[2];

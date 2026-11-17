@@ -17,12 +17,13 @@ import {
   isActive,
   isLit,
   levelWeights,
+  lightColour,
   lightShade,
   luma,
   normalColour,
   shadeSurface,
   surfaceNormal,
-  warmthRgb,
+  warmthColour,
   type Image,
   type Light,
   type Params,
@@ -83,15 +84,40 @@ describe("light shape", () => {
     expect(surfaceNormal(3, -2, 0, false)).toEqual([-0, 0, 1]);
   });
 
-  it("keeps the light's luminance whatever its warmth", () => {
-    for (const w of [-100, -40, 0, 40, 100]) {
-      const [r, g, b] = warmthRgb(w);
-      expect(luma(r, g, b)).toBeCloseTo(1, 12);
+  it("keeps the light's luminance whatever its colour, and is white at Saturation 0", () => {
+    for (const hue of [0, 35, 120, 211, 300, 360]) {
+      for (const saturation of [0, 40, 100]) {
+        const [r, g, b] = lightColour(hue, saturation);
+        expect(luma(r, g, b)).toBeCloseTo(1, 12);
+      }
     }
-    const [wr, , wb] = warmthRgb(100);
-    expect(wr).toBeGreaterThan(wb);
-    const [cr, , cb] = warmthRgb(-100);
-    expect(cb).toBeGreaterThan(cr);
+    for (const c of lightColour(200, 0)) expect(c).toBeCloseTo(1, 12);
+    const [rr, rg, rb] = lightColour(0, 100);
+    expect([rg, rb]).toEqual([0, 0]);
+    expect(rr).toBeGreaterThan(1);
+    const [br, , bb] = lightColour(240, 100);
+    expect(bb).toBeGreaterThan(br);
+    expect(lightColour(360, 70)).toEqual(lightColour(0, 70));
+  });
+
+  it("gives a light stored with Warmth the same colour as a hue and saturation", () => {
+    // Warmth as 1.0.0 had it: linear, at unit luminance.
+    const warmthRgb = (w: number) => {
+      const t = w / 100;
+      const k = [1 + 0.3 * t, 1, Math.max(1 - 0.45 * t, 0)];
+      const y = luma(k[0], k[1], k[2]);
+      return k.map((c) => c / y);
+    };
+    for (const w of [-100, -40, -1, 0, 1, 40, 100]) {
+      const { hue, saturation } = warmthColour(w);
+      const got = lightColour(hue, saturation);
+      warmthRgb(w).forEach((c, i) => expect(got[i]).toBeCloseTo(c, 12));
+    }
+    expect(warmthColour(0)).toEqual({ hue: 0, saturation: 0 });
+    expect(warmthColour(100).hue).toBeGreaterThan(20);
+    expect(warmthColour(100).hue).toBeLessThan(60);
+    expect(warmthColour(-100).hue).toBeGreaterThan(180);
+    expect(warmthColour(-100).hue).toBeLessThan(240);
   });
 });
 
@@ -107,7 +133,7 @@ describe("gain", () => {
   });
 
   it("never goes below zero", () => {
-    const p: Params = { ...DEFAULT_PARAMS, ambient: 0, lights: [light({ warmth: 100, intensity: 200 })] };
+    const p: Params = { ...DEFAULT_PARAMS, ambient: 0, lights: [light({ hue: 240, saturation: 100, intensity: 200 })] };
     for (let x = -0.5; x <= 1.5; x += 0.25) {
       for (const n of [surfaceNormal(5, 5, 100, false), surfaceNormal(-5, 0, 100, true), [0, 0, 1]]) {
         for (const g of gainAt(p, x, 0.3, 1, 1, n)) expect(g).toBeGreaterThanOrEqual(0);

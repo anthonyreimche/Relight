@@ -33,11 +33,12 @@ import {
   normalColour,
   shadeSurface,
   surfaceNormal,
+  warmthColour,
   type Image,
   type Light,
   type Params,
 } from "@rl/model";
-import { deriveAll, resetPatch, viewValues, type ViewMode } from "@rl/params";
+import { deriveAll, key, resetPatch, viewValues, type ViewMode } from "@rl/params";
 import { allStages, lightStage, viewStage } from "@rl/stage";
 import { fill } from "@rl-test/support/scenes";
 import {
@@ -164,17 +165,17 @@ function expectBitExact(a: Frame, b: Frame): void {
 const KEY: Params = {
   ...DEFAULT_PARAMS,
   ambient: 45,
-  lights: [light({ u: 0.15, v: 0.2, height: 35, falloff: 55, intensity: 120, warmth: 40 })],
+  lights: [light({ u: 0.15, v: 0.2, height: 35, falloff: 55, intensity: 120, hue: 35, saturation: 30 })],
 };
 
 const CASES: [string, Params][] = [
   ["key light, top left", KEY],
   ["the light moved (kept surface)", { ...KEY, lights: [{ ...KEY.lights[0], u: 0.6, v: 0.7 }] }],
-  ["two lights, cool rim", { ...KEY, lights: [...KEY.lights, light({ u: 1.1, v: 0.5, height: 10, falloff: 20, intensity: 90, warmth: -80 })] }],
+  ["two lights, cool rim", { ...KEY, lights: [...KEY.lights, light({ u: 1.1, v: 0.5, height: 10, falloff: 20, intensity: 90, hue: 210, saturation: 60 })] }],
   ["steep, inverted", { ...KEY, depth: 100, invert: true }],
   ["fine detail", { ...KEY, detail: 100 }],
   ["broad forms, overhead", { ...KEY, detail: 0, lights: [light({ height: 100, falloff: 0, intensity: 60 })] }],
-  ["four lights", { ...KEY, ambient: 20, lights: [0.1, 0.4, 0.7, 0.95].map((u, i) => light({ u, v: 1 - u, intensity: 40 + 30 * i, warmth: 50 - 40 * i })) }],
+  ["four lights", { ...KEY, ambient: 20, lights: [0.1, 0.4, 0.7, 0.95].map((u, i) => light({ u, v: 1 - u, intensity: 40 + 30 * i, hue: 90 * i, saturation: 25 * i })) }],
 ];
 
 describe("Relight on the real renderer", () => {
@@ -253,6 +254,24 @@ describe("Relight on the real renderer", () => {
       const ratio = (x: number, y: number) => on.data[(y * W + x) * 4 + 1] / off.data[(y * W + x) * 4 + 1];
       expect(ratio(20, 20)).toBeGreaterThan(ratio(20, H - 20) * 1.2);
       expect(ratio(20, 20)).toBeGreaterThan(ratio(W - 20, 20) * 1.2);
+    });
+  });
+
+  it("lights an edit stored with Warmth (1.0.0) in the colour it reads as", () => {
+    withRenderer({ stages: stages(), pipeline: LINEAR_PROBE_PIPELINE }, (r) => {
+      r.setImage(SOURCE);
+      r.setParams(identityParams(CURRENT));
+      r.setContributedParams(resetPatch());
+      const off = scenePoint(r);
+      for (const warmth of [70, -90]) {
+        const p: Params = { ...KEY, lights: [{ ...KEY.lights[0], ...warmthColour(warmth) }] };
+        const bag = deriveAll(p);
+        const tone = (bag[key("lightTone")] as number[]).slice();
+        tone.splice(1, 3, warmth, 0, 0);
+        r.setContributedParams({ ...bag, [key("lightTone")]: tone });
+        const on = scenePoint(r);
+        expectGain(`warmth ${warmth}`, compareGain(on, off, shadeSurface(computeSurface(HALF, p.detail), p)));
+      }
     });
   });
 
@@ -403,7 +422,7 @@ describe("Relight inside a mask", () => {
     bag: deriveAll(p),
   });
   const [key] = KEY.lights;
-  const subject: Params = { ...KEY, ambient: 70, lights: [{ ...key, u: 0.8, v: 0.4, warmth: -60 }] };
+  const subject: Params = { ...KEY, ambient: 70, lights: [{ ...key, u: 0.8, v: 0.4, hue: 270, saturation: 50 }] };
   const LIVE = { stages: stages(), pipeline: LINEAR_PROBE_PIPELINE, keepPassCheckpoints: true } as const;
 
   /** The scene-point frame of the photo's bag and masks, on a fresh renderer. */

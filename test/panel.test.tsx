@@ -71,10 +71,18 @@ describe("RelightPanel", () => {
     expect(rig.commits).toEqual(["Relight add light"]);
     expect(store().getState().selected).toBe(0);
     expect(slider("Intensity")).toMatchObject({ value: 80, max: 200 });
-    act(() => slider("Warmth").onChange(-30));
-    expect(params().lights[0].warmth).toBe(-30);
-    act(() => slider("Warmth").onCommit?.());
-    expect(rig.commits.at(-1)).toBe("Relight light warmth");
+    expect(slider("Hue")).toMatchObject({ value: NEW_LIGHT.hue, min: 0, max: 360, defaultValue: NEW_LIGHT.hue });
+    expect(slider("Saturation")).toMatchObject({ value: 0, min: 0, max: 100, defaultValue: 0 });
+    act(() => slider("Hue").onChange(200));
+    expect(params().lights[0].hue).toBe(200);
+    act(() => slider("Hue").onCommit?.());
+    expect(rig.commits.at(-1)).toBe("Relight light hue");
+    act(() => slider("Saturation").onChange(60));
+    act(() => slider("Saturation").onCommit?.());
+    expect(params().lights[0]).toMatchObject({ hue: 200, saturation: 60 });
+    expect(rig.commits.at(-1)).toBe("Relight light saturation");
+    expect(slider("Hue").trackBackground).toMatch(/^linear-gradient/);
+    expect(slider("Saturation").trackBackground).toMatch(/^linear-gradient\(to right, rgb\(255, 255, 255\), rgb\(0, 170, 255\)\)$/);
   });
 
   it("stops adding at the light limit", () => {
