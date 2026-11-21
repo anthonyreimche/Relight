@@ -17,10 +17,13 @@ import type { ParamScope } from "./safelight";
 import { store } from "./store";
 import { HUE_TRACK, cls, lightCss, saturationTrack } from "./styles";
 
+const SURFACE_TIP =
+  "The shape Relight reads from the photo: brighter parts stand nearer. Lights fall across this shape, so they model the subject instead of laying a flat glow on it.";
+
 const VIEW_OPTIONS: { value: string; label: string; title: string }[] = [
   { value: "0", label: "Photo", title: "Show the photo" },
-  { value: "1", label: "Normals", title: "Show the surface's normal map: which way each point faces" },
-  { value: "2", label: "Height", title: "Show the surface's height map: lighter is nearer" },
+  { value: "1", label: "Normals", title: "Preview which way each part of the surface faces, as colours" },
+  { value: "2", label: "Height", title: "Preview the surface's height: lighter is nearer" },
 ];
 
 const toView = (v: string): ViewMode => (v === "1" ? 1 : v === "2" ? 2 : 0);
@@ -33,9 +36,23 @@ interface SliderSpec<T> {
   track?(v: T): string;
 }
 
-const SURFACE: (SliderSpec<Params> & { key: "depth" | "detail" })[] = [
-  { key: "depth", label: "Depth", range: RANGE.depth, defaultValue: 50, read: (p) => p.depth },
-  { key: "detail", label: "Detail", range: RANGE.detail, defaultValue: 50, read: (p) => p.detail },
+const SURFACE: (SliderSpec<Params> & { key: "depth" | "detail"; tip: string })[] = [
+  {
+    key: "depth",
+    label: "Depth",
+    range: RANGE.depth,
+    defaultValue: 50,
+    read: (p) => p.depth,
+    tip: "How deep the surface is: higher makes lights model the shapes more strongly",
+  },
+  {
+    key: "detail",
+    label: "Detail",
+    range: RANGE.detail,
+    defaultValue: 50,
+    read: (p) => p.detail,
+    tip: "Higher follows fine texture, lower follows broad shapes",
+  },
 ];
 
 const LIGHT: (SliderSpec<Light> & { key: "intensity" | "height" | "falloff" | "hue" | "saturation" })[] = [
@@ -68,7 +85,9 @@ function PhotoPanel() {
   return (
     <div className={cls.panel} style={{ padding: "6px 8px 8px" }}>
       <div className={cls.head}>
-        <span className={cls.caption}>Surface</span>
+        <span className={cls.caption} title={SURFACE_TIP}>
+          Surface
+        </span>
       </div>
       <SegmentedControl
         size="sm"
@@ -78,26 +97,29 @@ function PhotoPanel() {
       />
       <div>
         {SURFACE.map((s) => (
-          <Slider
-            key={s.key}
-            label={s.label}
-            value={s.read(p)}
-            min={s.range.min}
-            max={s.range.max}
-            step={s.range.step}
-            defaultValue={s.defaultValue}
-            onChange={(v) => setParams(photoTarget, { [s.key]: v })}
-            onCommit={() => photoTarget.commit(s.label.toLowerCase())}
-          />
+          <div key={s.key} title={s.tip}>
+            <Slider
+              label={s.label}
+              value={s.read(p)}
+              min={s.range.min}
+              max={s.range.max}
+              step={s.range.step}
+              defaultValue={s.defaultValue}
+              onChange={(v) => setParams(photoTarget, { [s.key]: v })}
+              onCommit={() => photoTarget.commit(s.label.toLowerCase())}
+            />
+          </div>
         ))}
-        <Toggle
-          label="Invert (darker is nearer)"
-          checked={p.invert}
-          onChange={(invert) => {
-            setParams(photoTarget, { invert });
-            photoTarget.commit("invert");
-          }}
-        />
+        <div title="For photos where the subject is darker than what's behind it">
+          <Toggle
+            label="Invert (darker is nearer)"
+            checked={p.invert}
+            onChange={(invert) => {
+              setParams(photoTarget, { invert });
+              photoTarget.commit("invert");
+            }}
+          />
+        </div>
       </div>
       <Lights target={photoTarget} p={p} scope={null} />
     </div>

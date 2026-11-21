@@ -90,6 +90,17 @@ describe("view stage", () => {
   });
 });
 
+describe("pass precision", () => {
+  // A pass's ints are mediump unless its helpers say otherwise, and float(k)
+  // of a mediump int is mediump too. Mesa radeonsi runs mediump as 16-bit
+  // floats, where rlSigmaUnits' exp2(2k + 2) overflows from level 7 on (#268).
+  it("makes every pass's ints, and the floats made from them, 32-bit", () => {
+    for (const stage of allStages()) {
+      for (const p of stage.passes ?? []) expect((p.helpers ?? "").trimStart()).toMatch(/^precision highp int;/);
+    }
+  });
+});
+
 describe("allStages", () => {
   it("is the light stage and the view stage", () => {
     expect(allStages().map((s) => s.id)).toEqual([STAGE_ID, VIEW_STAGE_ID]);

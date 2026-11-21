@@ -31,6 +31,11 @@ function inputGlsl(encoding: InputEncoding): string {
 }`;
 }
 
+// Leads each pass's helpers, after core's uniforms. Ints are otherwise mediump,
+// and so is float(k) of one: on GPUs that run mediump as half floats (Mesa
+// radeonsi), rlSigmaUnits' exp2(2k + 2) overflows to infinity from level 7 on.
+const PASS_PRECISION = "precision highp int;";
+
 const WEIGHTS_GLSL = `
 float rlLevelRaw(float beta, int k) { return exp2(beta * float(${DETAIL_PIVOT} - k)); }
 float rlSigmaUnits(int k) { return sqrt((exp2(2.0 * float(k) + 2.0) - 1.0) / 3.0); }
@@ -53,7 +58,7 @@ float rlHeightWeight(int k) {
 }`;
 
 export function surfaceHelpers(encoding: InputEncoding): string {
-  return `
+  return `${PASS_PRECISION}
 ${inputGlsl(encoding)}
 float rlB3(int d) { int a = d < 0 ? -d : d; return a == 0 ? ${lit(B3[2])} : (a == 1 ? ${lit(B3[1])} : ${lit(B3[0])}); }
 float rlDB3(int d) { int a = d < 0 ? -d : d; float m = a == 0 ? 0.0 : (a == 1 ? ${lit(DB3[3])} : ${lit(DB3[4])}); return d < 0 ? -m : m; }
@@ -93,7 +98,7 @@ vec3 rlNormal(float gx, float gy) {
   return normalize(vec3(-d * gx, -d * gy, 1.0));
 }`;
 
-export const SHADE_HELPERS_GLSL = `
+export const SHADE_HELPERS_GLSL = `${PASS_PRECISION}
 ${NORMAL_GLSL}
 vec3 rlColour(vec4 tone) {
   float t = tone.y * 0.01;
@@ -130,7 +135,7 @@ export const SHADE_PASS_GLSL = `
 }
 `;
 
-export const VIEW_HELPERS_GLSL = `
+export const VIEW_HELPERS_GLSL = `${PASS_PRECISION}
 ${NORMAL_GLSL}
 float rlGrey(float h) {
   float g = clamp((h + 8.0) / 9.0, 0.0, 1.0);

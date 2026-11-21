@@ -39,6 +39,17 @@ describe("RelightPanel", () => {
     expect(rig.sliders(view.container).map((s) => s.label)).toEqual(["Depth", "Detail", "Ambient"]);
   });
 
+  it("explains the surface controls in tooltips (#268)", () => {
+    const { view } = setup();
+    const tip = (el: Element | null) => el?.closest("[title]")?.getAttribute("title") ?? "";
+    expect(tip(view.getByText("Surface"))).toMatch(/lights/i);
+    for (const label of ["Depth", "Detail"]) {
+      const el = [...view.container.querySelectorAll("[data-slider]")].find((s) => s.textContent?.startsWith(`${label} `)) ?? null;
+      expect(tip(el)).not.toBe("");
+    }
+    expect(tip(view.getByText("Invert (darker is nearer)"))).not.toBe("");
+  });
+
   it("writes Depth live with the derived keys and commits on release", () => {
     const { rig, slider } = setup();
     act(() => slider("Depth").onChange(70));
