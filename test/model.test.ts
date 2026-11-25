@@ -18,6 +18,8 @@ import {
   isLit,
   levelWeights,
   lightColour,
+  lightDisplayRgb,
+  lightFromRgb,
   lightShade,
   luma,
   normalColour,
@@ -253,5 +255,24 @@ describe("map views", () => {
     expect(heightGrey(1, false)).toBe(1);
     expect(heightGrey(-20, false)).toBe(0);
     expect(heightGrey(-8, true)).toBe(1);
+  });
+});
+
+describe("lightFromRgb", () => {
+  it("inverts lightDisplayRgb: the hue and saturation of a colour whose brightest channel is full", () => {
+    for (let hue = 0; hue < 360; hue += 7) {
+      for (const saturation of [1, 25, 60, 100]) {
+        const back = lightFromRgb(lightDisplayRgb(hue, saturation));
+        expect(back.hue).toBeCloseTo(hue, 6);
+        expect(back.saturation).toBeCloseTo(saturation, 6);
+      }
+    }
+  });
+
+  it("reads white and grey as saturation 0, and scales a dimmer colour up to its full-brightness twin", () => {
+    expect(lightFromRgb([1, 1, 1]).saturation).toBe(0);
+    expect(lightFromRgb([0.4, 0.4, 0.4]).saturation).toBe(0);
+    expect(lightFromRgb([0.5, 0.25, 0.25])).toEqual({ hue: 0, saturation: 50, lightness: 50 });
+    expect(lightFromRgb([0, 0, 0])).toEqual({ hue: 0, saturation: 0, lightness: 50 });
   });
 });

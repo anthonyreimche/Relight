@@ -13,7 +13,7 @@
 import type { KeyboardEvent, PointerEvent } from "react";
 import { falloffRadius } from "./model";
 import { editing, removeLight, setLight } from "./edit";
-import { layoutPoint, longEdgeToHeightFraction, readMapping, type Point } from "./mapping";
+import { longEdgeToHeightFraction, readMapping, type Point } from "./mapping";
 import { React, api } from "./rt";
 import { store } from "./store";
 import { lightCss } from "./styles";
@@ -66,7 +66,7 @@ export function RelightOverlay() {
   const m = mapping;
 
   const pointer = (e: PointerEvent<HTMLElement>): Point | null =>
-    root.current ? layoutPoint(e.clientX, e.clientY, root.current) : null;
+    root.current ? api.develop.framePoint(root.current, e.clientX, e.clientY) : null;
 
   const onDown = (i: number) => (e: PointerEvent<HTMLButtonElement>) => {
     if (e.button !== 0) return;

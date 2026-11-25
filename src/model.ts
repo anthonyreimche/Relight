@@ -156,6 +156,17 @@ export function lightDisplayRgb(hue: number, saturation: number): Rgb {
   return [channel(0), channel(4), channel(2)];
 }
 
+/** The hue and saturation of a display colour read as a light: its brightest
+ *  channel taken as full, so this inverts lightDisplayRgb. Lightness is not
+ *  part of a light and comes back as the mid value a field ignores. */
+export function lightFromRgb([r, g, b]: readonly [number, number, number]): { hue: number; saturation: number; lightness: number } {
+  const max = Math.max(r, g, b);
+  const d = max - Math.min(r, g, b);
+  if (max <= 0 || d <= 0) return { hue: 0, saturation: 0, lightness: 50 };
+  const sector = r === max ? (g - b) / d : g === max ? 2 + (b - r) / d : 4 + (r - g) / d;
+  return { hue: (((sector * 60) % 360) + 360) % 360, saturation: (100 * d) / max, lightness: 50 };
+}
+
 /** The light's colour, linear at unit luminance. */
 export function lightColour(hue: number, saturation: number): Rgb {
   const [r, g, b] = lightDisplayRgb(hue, saturation).map(srgbDecode);

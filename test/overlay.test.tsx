@@ -110,6 +110,17 @@ describe("RelightOverlay", () => {
     expect(rig.commits).toEqual(["Relight move light"]);
   });
 
+  it("moves a light by the pointer in layout px under Interface scale, as core's framePoint gives it", () => {
+    const { rig, handle, params } = setup();
+    rig.setFrameZoom(2);
+    const x0 = 2 * (100 + 0.25 * 600);
+    const y0 = 2 * (50 + 0.5 * 400);
+    press(handle(0), x0, y0, "pointerDown");
+    press(handle(0), x0 + 120, y0 + 80, "pointerMove");
+    expect(params().lights[0].u).toBeCloseTo(0.25 + 60 / 600, 10);
+    expect(params().lights[0].v).toBeCloseTo(0.5 + 40 / 400, 10);
+  });
+
   it("keeps a light dragged far off the photo within reach", () => {
     const { handle, params } = setup();
     press(handle(0), 250, 250, "pointerDown");

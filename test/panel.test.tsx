@@ -4,11 +4,12 @@
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { activate, deactivate } from "../src/index";
-import { DEFAULT_PARAMS, MAX_LIGHTS, NEW_LIGHT, type Light } from "../src/model";
+import { DEFAULT_PARAMS, MAX_LIGHTS, NEW_LIGHT, lightDisplayRgb, type Light } from "../src/model";
 import { RelightPanel, resetRelight } from "../src/Panel";
 import { deriveAll, key, readParams } from "../src/params";
 import { React } from "../src/rt";
 import { store } from "../src/store";
+import { cls } from "../src/styles";
 import { fakeApi } from "./support/fake-api";
 
 const light = (over: Partial<Light> = {}): Light => ({ u: 0.4, v: 0.3, ...NEW_LIGHT, ...over });
@@ -94,6 +95,51 @@ describe("RelightPanel", () => {
     expect(rig.commits.at(-1)).toBe("Relight light saturation");
     expect(slider("Hue").trackBackground).toMatch(/^linear-gradient/);
     expect(slider("Saturation").trackBackground).toMatch(/^linear-gradient\(to right, rgb\(255, 255, 255\), rgb\(0, 170, 255\)\)$/);
+  });
+
+  it("sets the chosen light's colour from a Colour field above its Hue and Saturation sliders, one undo step per drag", () => {
+    const { rig, view, params } = setup(deriveAll({ ...DEFAULT_PARAMS, lights: [light({ hue: 200, saturation: 60 })] }));
+    act(() => store().getState().select(0));
+    const field = () => rig.colourFields(view.container)[0];
+    expect(rig.colourFields(view.container)).toHaveLength(1);
+    expect(field()).toMatchObject({ label: "Colour", hue: 200, saturation: 60 });
+    expect(field().lightness).toBeUndefined();
+    expect(field().pick).toEqual({ paramBag: { [key("on")]: 0 } });
+    const text = view.container.textContent ?? "";
+    expect(text.indexOf("Colour")).toBeGreaterThan(text.indexOf("Falloff"));
+    expect(text.indexOf("Colour")).toBeLessThan(text.indexOf("Hue"));
+
+    const before = rig.commits.length;
+    act(() => field().onChange({ hue: 120, saturation: 40 }));
+    act(() => field().onChange({ hue: 130, saturation: 45 }));
+    expect(params().lights[0]).toMatchObject({ hue: 130, saturation: 45 });
+    expect(rig.commits).toHaveLength(before);
+    act(() => field().onCommit?.());
+    expect(rig.commits.slice(before)).toEqual(["Relight light colour"]);
+  });
+
+  it("shows the light's displayed colour in the field and reads a colour back as hue and saturation", () => {
+    const { rig, view } = setup(deriveAll({ ...DEFAULT_PARAMS, lights: [light({ hue: 200, saturation: 60 })] }));
+    act(() => store().getState().select(0));
+    const field = rig.colourFields(view.container)[0];
+    const rgb = field.toRgb?.(200, 60, 50);
+    expect(rgb).toEqual(lightDisplayRgb(200, 60));
+    expect(field.fromRgb?.(rgb ?? [0, 0, 0])).toMatchObject({ hue: 200, saturation: 60 });
+  });
+
+  it("adds lights with the kit's small full-width button, and has no button style of its own", () => {
+    const { view } = setup();
+    expect(view.getByText("+ Add Light").dataset).toMatchObject({ kit: "button", size: "sm", full: "true" });
+    expect(Object.keys(cls)).not.toContain("create");
+  });
+
+  it("keeps its how-to in tooltips, not in the panel", () => {
+    const { view } = setup();
+    expect(view.getByText("+ Add Light").title).toMatch(/Lower Ambient/);
+    expect(view.queryByText(/Lower Ambient/)).toBeNull();
+    act(() => store().getState().setSpawn({ u: 0.2, v: 0.25 }));
+    fireEvent.click(view.getByText("+ Add Light"));
+    expect(view.queryByText(/Drag the light on the photo/)).toBeNull();
   });
 
   it("stops adding at the light limit", () => {

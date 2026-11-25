@@ -15,7 +15,6 @@ export const STYLESHEET_ID = `relight.styles`;
 
 export const cls = {
   panel: `${P}-panel`,
-  create: `${P}-create`,
   head: `${P}-head`,
   caption: `${P}-caption`,
   hint: `${P}-hint`,
@@ -50,9 +49,6 @@ const tint = (color: string, percent: number) => `color-mix(in srgb, ${color} ${
 export function relightCss(t: UITokens): string {
   return `
 :where(.${cls.panel} > :not(:last-child)) { margin-block: 0 0.5rem; }
-:where(.${cls.create}) { display: flex; width: 100%; align-items: center; justify-content: center; gap: 0.25rem; border-radius: 0.25rem; background-color: ${t.surface2}; padding: 0.375rem 0.5rem; font-size: 11px; color: ${t.textSecondary}; }
-:where(.${cls.create}:hover) { color: ${t.textPrimary}; }
-:where(.${cls.create}:disabled) { cursor: default; opacity: 0.4; }
 :where(.${cls.head}) { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
 :where(.${cls.caption}) { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: ${t.textMuted}; }
 :where(.${cls.hint}) { font-size: 10px; line-height: 1.4; color: ${t.textMuted}; }
@@ -69,7 +65,7 @@ export function relightCss(t: UITokens): string {
 :where(.${cls.editor}) { border-top: 1px solid ${t.borderSubtle}; padding-top: 0.5rem; }
 :where(.${cls.editor} > :not(:last-child)) { margin-block: 0 0.375rem; }
 html.sl-larger-text .${cls.hint}, html.sl-larger-text .${cls.caption} { font-size: 12px !important; }
-html.sl-larger-text .${cls.create}, html.sl-larger-text .${cls.row} { font-size: 13px !important; line-height: 1.45 !important; }
+html.sl-larger-text .${cls.row} { font-size: 13px !important; line-height: 1.45 !important; }
 html.sl-larger-text .${cls.caption} { text-transform: none !important; letter-spacing: normal !important; }
 `;
 }

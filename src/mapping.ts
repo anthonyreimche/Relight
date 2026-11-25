@@ -24,15 +24,6 @@ export function readMapping(overlay: DevelopOverlayState): OverlayMapping | null
   return { rect, toScreen, toImage, radiusToScreen, imageAspect };
 }
 
-/** A pointer's position in an element's layout pixels: client pixels less the
- *  element's corner, divided by the Interface-scale zoom the element is drawn
- *  at (its visual width over its layout width; 1 without zoom). */
-export function layoutPoint(clientX: number, clientY: number, el: HTMLElement): Point {
-  const r = el.getBoundingClientRect();
-  const zoom = el.offsetWidth > 0 && r.width > 0 ? r.width / el.offsetWidth : 1;
-  return { x: (clientX - r.left) / zoom, y: (clientY - r.top) / zoom };
-}
-
 /** A distance in long edges as the host's UV radius (a fraction of the image height). */
 export function longEdgeToHeightFraction(d: number, imageAspect: number): number {
   return d * Math.max(imageAspect, 1);

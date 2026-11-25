@@ -9,9 +9,9 @@
 // edits the mask's Ambient and lights, on the photo's surface, and while it
 // shows the lights on the canvas are the mask's.
 
-import { DEFAULT_PARAMS, MAX_LIGHTS, NEW_LIGHT, RANGE, type Light, type Params } from "./model";
+import { DEFAULT_PARAMS, MAX_LIGHTS, NEW_LIGHT, RANGE, lightDisplayRgb, lightFromRgb, type Light, type Params } from "./model";
 import { addLight, maskTarget, photoTarget, removeLight, setLight, setParams, type Target } from "./edit";
-import { readParams, type ViewMode } from "./params";
+import { key, readParams, type ViewMode } from "./params";
 import { React, api } from "./rt";
 import type { ParamScope } from "./safelight";
 import { store } from "./store";
@@ -25,6 +25,9 @@ const VIEW_OPTIONS: { value: string; label: string; title: string }[] = [
   { value: "1", label: "Normals", title: "Preview which way each part of the surface faces, as colours" },
   { value: "2", label: "Height", title: "Preview the surface's height: lighter is nearer" },
 ];
+
+/** The eyedropper samples the photo with Relight off, so it picks the colour a light would be given. */
+const NO_RELIGHT = { paramBag: { [key("on")]: 0 } };
 
 const toView = (v: string): ViewMode => (v === "1" ? 1 : v === "2" ? 2 : 0);
 
@@ -153,7 +156,7 @@ function MaskPanel({ scope }: { scope: ParamScope }) {
  *  adding one hands the canvas to it. */
 function Lights({ target, p, scope }: { target: Target; p: Params; scope: ParamScope | null }) {
   const { Slider } = api.components;
-  const { Button } = api.ui;
+  const { Button, ColourField } = api.ui;
   const ours = store()((s) => (s.scope?.maskId ?? null) === (scope?.maskId ?? null));
   const selected = store()((s) => s.selected);
   const placing = store()((s) => s.placing) && ours;
@@ -203,15 +206,19 @@ function Lights({ target, p, scope }: { target: Target; p: Params; scope: ParamS
         onChange={(ambient) => setParams(target, { ambient })}
         onCommit={() => target.commit("ambient")}
       />
-      <button
-        type="button"
-        className={cls.create}
+      <Button
+        size="sm"
+        full
         disabled={atCap}
-        title={atCap ? `Light limit reached (${MAX_LIGHTS})` : "Add a light, then drag it on the photo"}
+        title={
+          atCap
+            ? `Light limit reached (${MAX_LIGHTS})`
+            : "Add a light, then drag it on the photo. Lower Ambient to deepen the shadows the lights bring back."
+        }
         onClick={add}
       >
         + Add Light
-      </button>
+      </Button>
       {p.lights.length > 0 ? (
         <Button
           size="sm"
@@ -256,28 +263,37 @@ function Lights({ target, p, scope }: { target: Target; p: Params; scope: ParamS
             </div>
           ))}
         </div>
-      ) : (
-        <div className={cls.hint}>
-          Lower Ambient to deepen the shadows, then add lights to bring light back where you want it.
-        </div>
-      )}
+      ) : null}
       {editing ? (
         <div className={cls.editor}>
           {LIGHT.map((s) => (
-            <Slider
-              key={s.key}
-              label={s.label}
-              value={s.read(editing)}
-              min={s.range.min}
-              max={s.range.max}
-              step={s.range.step}
-              defaultValue={s.defaultValue}
-              trackBackground={s.track?.(editing)}
-              onChange={(v) => setLight(target, chosen, { [s.key]: v })}
-              onCommit={() => target.commit(`light ${s.label.toLowerCase()}`)}
-            />
+            <React.Fragment key={s.key}>
+              {s.key === "hue" ? (
+                <ColourField
+                  label="Colour"
+                  title="The light's colour. The eyedropper takes it from the photo as it is without Relight."
+                  hue={editing.hue}
+                  saturation={editing.saturation}
+                  toRgb={lightDisplayRgb}
+                  fromRgb={lightFromRgb}
+                  pick={NO_RELIGHT}
+                  onChange={(c) => setLight(target, chosen, { hue: c.hue, saturation: c.saturation })}
+                  onCommit={() => target.commit("light colour")}
+                />
+              ) : null}
+              <Slider
+                label={s.label}
+                value={s.read(editing)}
+                min={s.range.min}
+                max={s.range.max}
+                step={s.range.step}
+                defaultValue={s.defaultValue}
+                trackBackground={s.track?.(editing)}
+                onChange={(v) => setLight(target, chosen, { [s.key]: v })}
+                onCommit={() => target.commit(`light ${s.label.toLowerCase()}`)}
+              />
+            </React.Fragment>
           ))}
-          <div className={cls.hint}>Drag the light on the photo to move it.</div>
         </div>
       ) : null}
     </>
