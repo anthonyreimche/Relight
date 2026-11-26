@@ -34,6 +34,7 @@ export function activate(api: SafelightAPI): void {
     title: "Relight",
     component: RelightPanel,
     defaultDock: { module: "develop", direction: "right", width: 268 },
+    modules: ["develop"],
     onReset: resetRelight,
     mask: { component: RelightPanel, owns: allKeys() },
   });

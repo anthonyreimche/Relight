@@ -1020,6 +1020,7 @@ function nt(e) {
 			direction: "right",
 			width: 268
 		},
+		modules: ["develop"],
 		onReset: Pe,
 		mask: {
 			component: H,
